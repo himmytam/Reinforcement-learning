@@ -1,0 +1,137 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+class StairClimbingMDP (object) :
+    def __init__(self):
+        self.S = 7
+        self.state_names = ['s1','s2','s3', 's4', 's5', 's6','s7']
+        self.A =2
+        self.action_name = ['L','R']
+        self.absorbing = [ 1 , 0 , 0 , 0 , 0 , 0 , 1 ]
+        self.T = self.transition_matrix()
+        self.R = self.reward_matrix()
+        
+    def transition_matrix(self):
+        TL = np.array(         [[0 , 0 , 0 , 0 , 0 , 0 , 0 ] , # 1 TO STATE
+                               [ 1/2, 0 , 0 , 0 , 0 , 0 , 0 ] , # .
+                               [ 0 , 1/2 , 0 , 0 , 0 , 0 , 0 ] , # .
+                               [ 0 , 0 , 1/2, 0 , 0 , 0 , 0 ] , #
+                               [ 0 , 0 , 0 , 1/2 , 0 , 0 , 0 ] , #
+                               [ 0 , 0 , 0 , 0 , 1/2 , 0 , 0 ] , #
+                               [ 0 , 0 , 0 , 0 , 0 , 1/2 , 0 ]]) # 7
+# MODIFY HERE
+# 1 . . . 7 <−− FROM STATE
+        TR = np.array(        [[ 0 , 1/2 , 0 , 0 , 0 , 0 , 0 ] , # 1 TO STATE
+                               [ 0 , 0  , 1/2 , 0 , 0 , 0 , 0 ] , # .
+                               [ 0 , 0 , 0  , 1/2 , 0 , 0 , 0 ] , # .
+                               [ 0 , 0 , 0, 0 , 1/2 , 0 , 0 ] , #
+                               [ 0 , 0 , 0 , 0  , 0 , 1/2 , 0 ] , #
+                               [ 0 , 0 , 0 , 0 , 0  , 0 , 1/2 ] , #
+                               [ 0 , 0 , 0 , 0 , 0 , 0  , 0  ]]) # 7
+
+        return np.dstack([TR,TL]) 
+    
+    def transition_function(self,prior_state, action, post_state):
+        prob = self.T[post_state,prior_state,action]
+        return prob
+
+    def reward_matrix (self, S = None, A = None):
+        if(S == None):
+            S = self.S
+        if(A == None) :
+            A = self.A
+        R= np.zeros((S,S,A))
+        for i in range(S):
+            for j in range(A):
+                for k in range(S):
+                    R[k,i,j] = self.reward_function(i,j,k)
+        return R
+
+    def reward_function(self, prior_state, action, post_state):
+        if((prior_state == 1) and (action == 0) and (post_state == 0)):
+            rew = -100
+        elif ((prior_state == 5) and (action == 1) and (post_state == 6)):
+            rew = 100
+        elif (action == 0):
+            rew = 10
+        else:
+            rew = -10  
+        return rew
+    
+    def value_function(self,policy,gamma,tol):        
+        v_f = np.zeros((self.A,self.S))
+        v_f_new = np.zeros((self.A,self.S))
+        new_out_put = np.zeros(self.S)
+        old_out_put = np.zeros(self.S)
+        delta = tol + 5
+        count_k = 0
+        while (delta>tol):
+            for a in range(self.A):
+                for i in range(1,self.S-1):
+                    v_f_new[a][i] = self.transition_function(i,a,i+1)*(self.reward_function(i,a,i+1) + gamma*new_out_put[i+1])+self.transition_function(i,a,i-1)*(self.reward_function(i,a,i-1) + gamma*new_out_put[i-1])
+                    v_f[a][i] = v_f_new[a][i]    
+            for k in range(self.S):
+                new_out_put[k] = v_f_new[0][k] + v_f_new[1][k]
+            delta = np.sum(np.abs(new_out_put - old_out_put))
+            #print(new_out_put)
+            for y in range(self.S):
+                old_out_put[y] = v_f_new[0][y] + v_f_new[1][y]
+            #print('---')
+            count_k = count_k + 1
+        return new_out_put,count_k
+    
+    def value_function_always_up(self,policy,gamma,tol):        
+        v_f = np.zeros((self.A,self.S))
+        v_f_new = np.zeros((self.A,self.S))
+        new_out_put = np.zeros(self.S)
+        old_out_put = np.zeros(self.S)
+        delta = tol + 5
+        count_k = 0
+        while (delta>tol):
+            for a in range(1,2):
+                for i in range(1,self.S-1):
+                    v_f_new[a][i] = self.transition_function(i,a,i+1)*(self.reward_function(i,a,i+1) + gamma*new_out_put[i+1])+self.transition_function(i,a,i-1)*(self.reward_function(i,a,i-1) + gamma*new_out_put[i-1])
+                    v_f[a][i] = v_f_new[a][i]    
+            for k in range(self.S):
+                new_out_put[k] = v_f_new[0][k] + v_f_new[1][k]
+            delta = np.sum(np.abs(new_out_put - old_out_put))
+            #print(new_out_put)
+            for y in range(self.S):
+                old_out_put[y] = v_f_new[0][y] + v_f_new[1][y]
+            #print('---')
+            count_k = count_k + 1
+        return new_out_put,count_k 
+    
+    def value_function_always_down(self,policy,gamma,tol):        
+        v_f = np.zeros((self.A,self.S))
+        v_f_new = np.zeros((self.A,self.S))
+        new_out_put = np.zeros(self.S)
+        old_out_put = np.zeros(self.S)
+        delta = tol + 5
+        count_k = 0
+        while (delta>tol):
+            for a in range(0,1):
+                for i in range(1,self.S-1):
+                    v_f_new[a][i] = self.transition_function(i,a,i+1)*(self.reward_function(i,a,i+1) + gamma*new_out_put[i+1])+self.transition_function(i,a,i-1)*(self.reward_function(i,a,i-1) + gamma*new_out_put[i-1])
+                    v_f[a][i] = v_f_new[a][i]    
+            for k in range(self.S):
+                new_out_put[k] = v_f_new[0][k] + v_f_new[1][k]
+            delta = np.sum(np.abs(new_out_put - old_out_put))
+            #print(new_out_put)
+            for y in range(self.S):
+                old_out_put[y] = v_f_new[0][y] + v_f_new[1][y]
+            #print('---')
+            count_k = count_k + 1
+        return new_out_put,count_k
+call_class = StairClimbingMDP()
+
+#call_class.transition_function(2,1,3)
+
+#value_function,k = call_class.value_function(0,0.9,1,5) 
+#print(k)
+
+value_function_always_u, k_u = call_class.value_function_always_up(0,0.5,1)
+print('value function of always go up is',value_function_always_u,'and it terminate after',k_u,'steps')
+value_function_always_d ,k_d= call_class.value_function_always_down(0,0.1,1)
+print('value function of always go down is',value_function_always_d,'and it terminate after',k_d,'steps')
