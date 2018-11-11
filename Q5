@@ -1,0 +1,161 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+class StairClimbingMDP (object) :
+    def __init__(self):
+        self.S = 7
+        self.state_names = ['s1','s2','s3', 's4', 's5', 's6','s7']
+        self.A =2
+        self.action_name = ['L','R']
+        self.absorbing = [ 1 , 0 , 0 , 0 , 0 , 0 , 1 ]
+        self.T = self.transition_matrix()
+        self.R = self.reward_matrix()
+        
+    def transition_matrix(self):
+        TL = np.array(         [[0 , 0 , 0 , 0 , 0 , 0 , 0 ] , # 1 TO STATE
+                               [ 1/2, 0 , 0 , 0 , 0 , 0 , 0 ] , # .
+                               [ 0 , 1/2 , 0 , 0 , 0 , 0 , 0 ] , # .
+                               [ 0 , 0 , 1/2, 0 , 0 , 0 , 0 ] , #
+                               [ 0 , 0 , 0 , 1/2 , 0 , 0 , 0 ] , #
+                               [ 0 , 0 , 0 , 0 , 1/2 , 0 , 0 ] , #
+                               [ 0 , 0 , 0 , 0 , 0 , 1/2 , 0 ]]) # 7
+# MODIFY HERE
+# 1 . . . 7 <−− FROM STATE
+        TR = np.array(        [[ 0 , 1/2 , 0 , 0 , 0 , 0 , 0 ] , # 1 TO STATE
+                               [ 0 , 0  , 1/2 , 0 , 0 , 0 , 0 ] , # .
+                               [ 0 , 0 , 0  , 1/2 , 0 , 0 , 0 ] , # .
+                               [ 0 , 0 , 0, 0 , 1/2 , 0 , 0 ] , #
+                               [ 0 , 0 , 0 , 0  , 0 , 1/2 , 0 ] , #
+                               [ 0 , 0 , 0 , 0 , 0  , 0 , 1/2 ] , #
+                               [ 0 , 0 , 0 , 0 , 0 , 0  , 0  ]]) # 7
+
+        return np.dstack([TR,TL]) 
+    
+    def transition_function(self,prior_state, action, post_state):
+        prob = self.T[post_state,prior_state,action]
+        return prob
+
+    def reward_matrix (self, S = None, A = None):
+        if(S == None):
+            S = self.S
+        if(A == None) :
+            A = self.A
+        R= np.zeros((S,S,A))
+        for i in range(S):
+            for j in range(A):
+                for k in range(S):
+                    R[k,i,j] = self.reward_function(i,j,k)
+        return R
+
+    def reward_function(self, prior_state, action, post_state):
+        if((prior_state == 1) and (action == 0) and (post_state == 0)):
+            rew = -100
+        elif ((prior_state == 5) and (action == 1) and (post_state == 6)):
+            rew = 100
+        elif (action == 0):
+            rew = 10
+        else:
+            rew = -10  
+        return rew
+    
+    def value_function(self,policy,gamma,tol):        
+        v_f = np.zeros((self.A,self.S))
+        v_f_new = np.zeros((self.A,self.S))
+        new_out_put = np.zeros(self.S)
+        old_out_put = np.zeros(self.S)
+        delta = tol + 5
+        count_k = 0
+        while (delta>tol):
+            for a in range(self.A):
+                for i in range(1,self.S-1):
+                    v_f_new[a][i] = self.transition_function(i,a,i+1)*(self.reward_function(i,a,i+1) + gamma*new_out_put[i+1])+self.transition_function(i,a,i-1)*(self.reward_function(i,a,i-1) + gamma*new_out_put[i-1])
+                    v_f[a][i] = v_f_new[a][i]    
+            for k in range(self.S):
+                new_out_put[k] = v_f_new[0][k] + v_f_new[1][k]
+            delta = np.sum(np.abs(new_out_put - old_out_put))
+            #print(new_out_put)
+            for y in range(self.S):
+                old_out_put[y] = v_f_new[0][y] + v_f_new[1][y]
+            #print('---')
+            count_k = count_k + 1
+        return new_out_put,count_k
+    
+    def value_function_always_up(self,policy,gamma,tol):        
+        v_f = np.zeros((self.A,self.S))
+        v_f_new = np.zeros((self.A,self.S))
+        new_out_put = np.zeros(self.S)
+        old_out_put = np.zeros(self.S)
+        delta = tol + 5
+        count_k = 0
+        while (delta>tol):
+            for a in range(1,2):
+                for i in range(1,self.S-1):
+                    v_f_new[a][i] = self.transition_function(i,a,i+1)*(self.reward_function(i,a,i+1) + gamma*new_out_put[i+1])+self.transition_function(i,a,i-1)*(self.reward_function(i,a,i-1) + gamma*new_out_put[i-1])
+                    v_f[a][i] = v_f_new[a][i]    
+            for k in range(self.S):
+                new_out_put[k] = v_f_new[0][k] + v_f_new[1][k]
+            delta = np.sum(np.abs(new_out_put - old_out_put))
+            #print(new_out_put)
+            for y in range(self.S):
+                old_out_put[y] = v_f_new[0][y] + v_f_new[1][y]
+            #print('---')
+            count_k = count_k + 1
+        return new_out_put,count_k 
+    
+    def value_function_always_down(self,policy,gamma,tol):        
+        v_f = np.zeros((self.A,self.S))
+        v_f_new = np.zeros((self.A,self.S))
+        new_out_put = np.zeros(self.S)
+        old_out_put = np.zeros(self.S)
+        delta = tol + 5
+        count_k = 0
+        while (delta>tol):
+            for a in range(0,1):
+                for i in range(1,self.S-1):
+                    v_f_new[a][i] = self.transition_function(i,a,i+1)*(self.reward_function(i,a,i+1) + gamma*new_out_put[i+1])+self.transition_function(i,a,i-1)*(self.reward_function(i,a,i-1) + gamma*new_out_put[i-1])
+                    v_f[a][i] = v_f_new[a][i]    
+            for k in range(self.S):
+                new_out_put[k] = v_f_new[0][k] + v_f_new[1][k]
+            delta = np.sum(np.abs(new_out_put - old_out_put))
+            #print(new_out_put)
+            for y in range(self.S):
+                old_out_put[y] = v_f_new[0][y] + v_f_new[1][y]
+            #print('---')
+            count_k = count_k + 1
+        return new_out_put,count_k
+    
+    def q5(self,value_function,initial_state):
+        reward_always_go_up= 0
+        reward_always_go_down = 0
+        for i in range(initial_state,len(value_function)):
+            reward_always_go_up = reward_always_go_up + value_function[i]
+        for j in range(0,initial_state):
+            reward_always_go_down = reward_always_go_down + value_function[j]
+        return reward_always_go_up,reward_always_go_down
+            
+call_class = StairClimbingMDP()
+ru=np.zeros(11)
+rd=np.zeros(11)
+
+for j in range(0,11):
+    value_function,k = call_class.value_function(0,j/10,1)
+    ru[j],rd[j] = call_class.q5(value_function,3)
+
+x_axis = np.linspace(0,1,11)
+
+
+plt.figure(1)
+plt.title('Total reward of always going up against gamma')
+plt.plot(x_axis,ru,label = 'Reward of always go up')
+plt.plot(x_axis,rd,label = 'Reward of always go down')
+plt.xlabel('gamma')
+plt.ylabel('total reward')
+plt.legend(loc='upper right')
+plt.show()
+
+
+
+value_function,k = call_class.value_function(0,1,1)
+call_class.q5(value_function,1)
+print(value_function)
